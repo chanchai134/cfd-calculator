@@ -77,6 +77,15 @@
       .warn {
         color: #fca5a5;
       }
+      .highlight {
+        border-color: #38bdf8;
+        background: #0c2a4a;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, .35);
+      }
+      label.highlight input {
+        border-color: #38bdf8;
+        background: #0c2a4a;
+      }
     </style>
   </head>
   <body>
@@ -132,7 +141,6 @@
           const marginPerLot = (itemsPerLot * price) / leverage;
           // Loss per lot when price moves against you by maxLoss %
           const lossPerLot = itemsPerLot * price * maxLoss;
-          const maxLotByMargin = balance / marginPerLot;
           // Max lots so that stop-loss at maxLoss% price move triggers before broker stop-out
           // At stop-out: equity = stopOut * usedMargin
           // equity = balance - lots * lossPerLot
@@ -140,28 +148,20 @@
           // lots = balance / (lossPerLot + stopOut * marginPerLot)
           const stopOutDenominator = lossPerLot + stopOut * marginPerLot;
           const maxLotByStopOut = stopOutDenominator > 0 ? balance / stopOutDenominator : 0;
-          const recommendedMaxLot = Math.min(maxLotByMargin, maxLotByStopOut);
 
-          const usedMargin = recommendedMaxLot * marginPerLot;
-          const expectedLoss = recommendedMaxLot * lossPerLot;
-          const equityAfterLoss = balance - expectedLoss;
-          const stopOutEquity = stopOut * usedMargin;
-          const marginLevelAfterLoss = usedMargin > 0 ? (equityAfterLoss / usedMargin) * 100 : Infinity;
-          const freeMarginAfterTrade = balance - usedMargin;
-          const remainingBalanceAtStopOut = stopOutEquity;
+          const usedMargin = maxLotByStopOut * marginPerLot;
+          const expectedLoss = maxLotByStopOut * lossPerLot;
+          const remainingBalanceAtStopOut = stopOut * usedMargin;
+          const marginLevelAfterLoss = usedMargin > 0 ? (remainingBalanceAtStopOut / usedMargin) * 100 : Infinity;
 
           return {
             valid: true,
             marginPerLot,
             lossPerLot,
-            maxLotByMargin,
             maxLotByStopOut,
-            recommendedMaxLot,
             usedMargin,
             expectedLoss,
-            equityAfterLoss,
             marginLevelAfterLoss,
-            freeMarginAfterTrade,
             remainingBalanceAtStopOut,
           };
         }, [form]);
@@ -199,7 +199,7 @@
                 Stop-Out Level %
                 <input name="stopOutLevelPct" value={form.stopOutLevelPct} onChange={onChange} type="number" min="0" max="99.99" step="0.01" />
               </label>
-              <label>
+              <label className="highlight">
                 Max Acceptable Loss % (your rule)
                 <input name="maxLossPct" value={form.maxLossPct} onChange={onChange} type="number" min="0.01" max="100" step="0.01" />
               </label>
@@ -209,15 +209,7 @@
                 <div className="warn">Please enter valid positive numbers. Stop-Out Level must be below 100%.</div>
               ) : (
                 <div className="metrics">
-                  <div className="metric">
-                    <h3>Recommended Maximum Lot</h3>
-                    <strong>{format(r.recommendedMaxLot, 4)}</strong>
-                  </div>
-                  <div className="metric">
-                    <h3>Max Lot by Margin</h3>
-                    <strong>{format(r.maxLotByMargin, 4)}</strong>
-                  </div>
-                  <div className="metric">
+                  <div className="metric highlight">
                     <h3>Max Lot by Stop-Out Constraint</h3>
                     <strong>{format(r.maxLotByStopOut, 4)}</strong>
                   </div>
@@ -229,21 +221,13 @@
                     <h3>Loss per Lot at Max Loss %</h3>
                     <strong>{format(r.lossPerLot, 2)}</strong>
                   </div>
-                  <div className="metric">
+                  <div className="metric highlight">
                     <h3>Used Margin</h3>
                     <strong>{format(r.usedMargin, 2)}</strong>
                   </div>
                   <div className="metric">
-                    <h3>Free Margin After Trade</h3>
-                    <strong>{format(r.freeMarginAfterTrade, 2)}</strong>
-                  </div>
-                  <div className="metric">
                     <h3>Expected Loss at Max Loss %</h3>
                     <strong>{format(r.expectedLoss, 2)}</strong>
-                  </div>
-                  <div className="metric">
-                    <h3>Equity After Expected Loss</h3>
-                    <strong>{format(r.equityAfterLoss, 2)}</strong>
                   </div>
                   <div className="metric">
                     <h3>Margin Level After Expected Loss</h3>
