@@ -151,10 +151,8 @@
 
           const usedMargin = maxLotByStopOut * marginPerLot;
           const expectedLoss = maxLotByStopOut * lossPerLot;
-          const equityAfterLoss = balance - expectedLoss;
-          const stopOutEquity = stopOut * usedMargin;
-          const marginLevelAfterLoss = usedMargin > 0 ? (equityAfterLoss / usedMargin) * 100 : Infinity;
-          const remainingBalanceAtStopOut = stopOutEquity;
+          const remainingBalanceAtStopOut = stopOut * usedMargin;
+          const marginLevelAfterLoss = usedMargin > 0 ? (remainingBalanceAtStopOut / usedMargin) * 100 : Infinity;
 
           return {
             valid: true,
@@ -163,7 +161,6 @@
             maxLotByStopOut,
             usedMargin,
             expectedLoss,
-            equityAfterLoss,
             marginLevelAfterLoss,
             remainingBalanceAtStopOut,
           };
@@ -231,10 +228,6 @@
                   <div className="metric">
                     <h3>Expected Loss at Max Loss %</h3>
                     <strong>{format(r.expectedLoss, 2)}</strong>
-                  </div>
-                  <div className="metric">
-                    <h3>Equity After Expected Loss</h3>
-                    <strong>{format(r.equityAfterLoss, 2)}</strong>
                   </div>
                   <div className="metric">
                     <h3>Margin Level After Expected Loss</h3>
