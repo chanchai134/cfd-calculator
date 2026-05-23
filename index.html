@@ -135,7 +135,8 @@
           const lossPerLot = itemsPerLot * adverseMove;
           const maxLotByMargin = balance / marginPerLot;
           const maxLotByRisk = (balance * maxLoss) / lossPerLot;
-          const maxLotByStopOut = balance / (lossPerLot + stopOut * marginPerLot);
+          const stopOutDenominator = lossPerLot + stopOut * marginPerLot;
+          const maxLotByStopOut = stopOutDenominator > 0 ? balance / stopOutDenominator : 0;
           const recommendedMaxLot = Math.min(maxLotByMargin, maxLotByRisk, maxLotByStopOut);
 
           const usedMargin = recommendedMaxLot * marginPerLot;
@@ -171,7 +172,7 @@
           <div className="wrap">
             <h1>CFD Max Lot Calculator</h1>
             <p>
-              Estimate maximum lot size using leverage, items-per-lot, stop-out level, and
+              Estimate maximum lot size using leverage, units per lot, stop-out level, and
               your acceptable loss %.
             </p>
             <div className="grid">
