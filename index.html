@@ -217,21 +217,21 @@
                     <h3>Margin Required per Lot</h3>
                     <strong>{format(r.marginPerLot, 2)}</strong>
                   </div>
-                  <div className="metric">
-                    <h3>Loss per Lot at Max Loss %</h3>
-                    <strong>{format(r.lossPerLot, 2)}</strong>
-                  </div>
                   <div className="metric highlight">
                     <h3>Used Margin</h3>
                     <strong>{format(r.usedMargin, 2)}</strong>
                   </div>
                   <div className="metric">
-                    <h3>Expected Loss at Max Loss %</h3>
-                    <strong>{format(r.expectedLoss, 2)}</strong>
-                  </div>
-                  <div className="metric">
                     <h3>Margin Level After Expected Loss</h3>
                     <strong>{format(r.marginLevelAfterLoss, 2)}%</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Loss per Lot at Max Loss %</h3>
+                    <strong>{format(r.lossPerLot, 2)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Expected Loss at Max Loss %</h3>
+                    <strong>{format(r.expectedLoss, 2)}</strong>
                   </div>
                   <div className="metric">
                     <h3>Remaining Balance at Stop-Out</h3>
