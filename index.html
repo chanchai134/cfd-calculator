@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CFD Max Lot Calculator</title>
+    <script crossorigin="anonymous" src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z"></script>
+    <script crossorigin="anonymous" src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1"></script>
+    <script crossorigin="anonymous" src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" integrity="sha384-AISI5AuDG6E8DeEiFMVB3rGQxhZt24OU0avMp+GMV64+tpnA3+Z6F5MT0f96iPva"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+      }
+      p {
+        margin-top: 0;
+        color: #94a3b8;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+      }
+      input {
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #111827;
+        color: #e2e8f0;
+        padding: 10px;
+        font-size: 15px;
+      }
+      .card {
+        margin-top: 16px;
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+      .metric {
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 10px;
+        background: #0b1220;
+      }
+      .metric h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        color: #94a3b8;
+      }
+      .metric strong {
+        font-size: 20px;
+      }
+      .warn {
+        color: #fca5a5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useMemo, useState } = React;
+
+      function toNumber(value, fallback = 0) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function format(value, digits = 2) {
+        if (!Number.isFinite(value)) return "—";
+        return value.toLocaleString(undefined, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        });
+      }
+
+      function App() {
+        const [form, setForm] = useState({
+          balance: "1000",
+          leverage: "100",
+          itemsPerLot: "100",
+          price: "100",
+          adverseMove: "2",
+          stopOutLevelPct: "50",
+          maxLossPct: "10",
+        });
+
+        const r = useMemo(() => {
+          const balance = toNumber(form.balance);
+          const leverage = toNumber(form.leverage);
+          const itemsPerLot = toNumber(form.itemsPerLot);
+          const price = toNumber(form.price);
+          const adverseMove = toNumber(form.adverseMove);
+          const stopOut = toNumber(form.stopOutLevelPct) / 100;
+          const maxLoss = toNumber(form.maxLossPct) / 100;
+
+          const valid =
+            balance > 0 &&
+            leverage > 0 &&
+            itemsPerLot > 0 &&
+            price > 0 &&
+            adverseMove > 0 &&
+            stopOut >= 0 &&
+            stopOut < 1 &&
+            maxLoss > 0;
+
+          if (!valid) {
+            return { valid: false };
+          }
+
+          const marginPerLot = (itemsPerLot * price) / leverage;
+          const lossPerLot = itemsPerLot * adverseMove;
+          const maxLotByMargin = balance / marginPerLot;
+          const maxLotByRisk = (balance * maxLoss) / lossPerLot;
+          const stopOutDenominator = lossPerLot + stopOut * marginPerLot;
+          const maxLotByStopOut = stopOutDenominator > 0 ? balance / stopOutDenominator : 0;
+          const recommendedMaxLot = Math.min(maxLotByMargin, maxLotByRisk, maxLotByStopOut);
+
+          const usedMargin = recommendedMaxLot * marginPerLot;
+          const expectedLoss = recommendedMaxLot * lossPerLot;
+          const equityAfterLoss = balance - expectedLoss;
+          const stopOutEquity = stopOut * usedMargin;
+          const marginLevelAfterLoss = usedMargin > 0 ? (equityAfterLoss / usedMargin) * 100 : Infinity;
+          const stopOutLossAmount = balance - stopOutEquity;
+          const stopOutLossPctOfBalance = (stopOutLossAmount / balance) * 100;
+
+          return {
+            valid: true,
+            marginPerLot,
+            lossPerLot,
+            maxLotByMargin,
+            maxLotByRisk,
+            maxLotByStopOut,
+            recommendedMaxLot,
+            usedMargin,
+            expectedLoss,
+            equityAfterLoss,
+            marginLevelAfterLoss,
+            stopOutLossPctOfBalance,
+          };
+        }, [form]);
+
+        function onChange(e) {
+          const { name, value } = e.target;
+          setForm((f) => ({ ...f, [name]: value }));
+        }
+
+        return (
+          <div className="wrap">
+            <h1>CFD Max Lot Calculator</h1>
+            <p>
+              Estimate maximum lot size using leverage, units per lot, stop-out level, and
+              your acceptable loss %.
+            </p>
+            <div className="grid">
+              <label>
+                Account Balance
+                <input name="balance" value={form.balance} onChange={onChange} type="number" min="0" step="0.01" />
+              </label>
+              <label>
+                Leverage (e.g., 100 for 1:100)
+                <input name="leverage" value={form.leverage} onChange={onChange} type="number" min="1" step="1" />
+              </label>
+              <label>
+                Units per Lot (Contract Size)
+                <input name="itemsPerLot" value={form.itemsPerLot} onChange={onChange} type="number" min="0" step="0.01" />
+              </label>
+              <label>
+                Asset Price
+                <input name="price" value={form.price} onChange={onChange} type="number" min="0" step="0.0001" />
+              </label>
+              <label>
+                Price Distance to Stop Loss
+                <input name="adverseMove" value={form.adverseMove} onChange={onChange} type="number" min="0" step="0.0001" />
+              </label>
+              <label>
+                Stop-Out Level %
+                <input name="stopOutLevelPct" value={form.stopOutLevelPct} onChange={onChange} type="number" min="0" max="99.99" step="0.01" />
+              </label>
+              <label>
+                Max Acceptable Loss % (your rule)
+                <input name="maxLossPct" value={form.maxLossPct} onChange={onChange} type="number" min="0.01" max="100" step="0.01" />
+              </label>
+            </div>
+            <div className="card">
+              {!r.valid ? (
+                <div className="warn">Please enter valid positive numbers. Stop-Out Level must be below 100%.</div>
+              ) : (
+                <div className="metrics">
+                  <div className="metric">
+                    <h3>Recommended Maximum Lot</h3>
+                    <strong>{format(r.recommendedMaxLot, 4)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Max Lot by Margin</h3>
+                    <strong>{format(r.maxLotByMargin, 4)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Max Lot by Your Loss Rule</h3>
+                    <strong>{format(r.maxLotByRisk, 4)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Max Lot by Stop-Out Constraint</h3>
+                    <strong>{format(r.maxLotByStopOut, 4)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Margin Required per Lot</h3>
+                    <strong>{format(r.marginPerLot, 2)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Loss per Lot (Adverse Move)</h3>
+                    <strong>{format(r.lossPerLot, 2)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Expected Loss at Recommended Lot</h3>
+                    <strong>{format(r.expectedLoss, 2)}</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Margin Level After Expected Loss</h3>
+                    <strong>{format(r.marginLevelAfterLoss, 2)}%</strong>
+                  </div>
+                  <div className="metric">
+                    <h3>Stop-Out Loss Capacity (% of Balance)</h3>
+                    <strong>{format(r.stopOutLossPctOfBalance, 2)}%</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
